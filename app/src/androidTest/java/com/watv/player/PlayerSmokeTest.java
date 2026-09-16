@@ -60,6 +60,10 @@ public class PlayerSmokeTest {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){
             java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
             Playlist.Channel channel=new Playlist.Channel("Teste de reprodução","Filmes","http://127.0.0.1:"+server.getLocalPort()+"/test.wav");
+            java.util.concurrent.atomic.AtomicBoolean idle=new java.util.concurrent.atomic.AtomicBoolean();
+            long deadline=System.currentTimeMillis()+10000;
+            while(!idle.get()&&System.currentTimeMillis()<deadline){scenario.onActivity(a->idle.set(!a.busy));Thread.sleep(100);}
+            assertTrue("A inicialização deve concluir",idle.get());
             scenario.onActivity(a->a.play(channel));
             long end=System.currentTimeMillis()+15000;
             while(!ready.get()&&System.currentTimeMillis()<end){
