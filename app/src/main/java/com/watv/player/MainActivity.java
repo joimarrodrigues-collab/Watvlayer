@@ -58,10 +58,11 @@ public class MainActivity extends Activity {
         parent.addView(e); return e;
     }
     private void login() {
-        page(); title("Seus canais. Na sua tela.");
+        page(); title("Seus canais. Na sua tela. • v0.2");
         ScrollView scroll = new ScrollView(this); LinearLayout form = new LinearLayout(this); form.setOrientation(1); scroll.addView(form); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         Spinner mode = new Spinner(this); mode.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Lista M3U","Xtream Codes"})); form.addView(mode);
         EditText address = field("URL da lista M3U",form,false);
+        address.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
         EditText user = field("Usuário",form,false), password = field("Senha",form,true);
         mode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             public void onNothingSelected(AdapterView<?> p) {}
@@ -93,7 +94,7 @@ public class MainActivity extends Activity {
                 List<Playlist.Channel> data=loader.get();
                 runOnUiThread(()->{ if(isDestroyed() || token!=generation)return; loading=false; channels.clear(); channels.addAll(data); catalog(); });
             } catch(Exception e) {
-                runOnUiThread(()->{ if(isDestroyed() || token!=generation)return; loading=false; status.setText("Não foi possível carregar. Confira a fonte, o acesso e a conexão e tente novamente."); });
+                runOnUiThread(()->{ if(isDestroyed() || token!=generation)return; loading=false; status.setText(Playlist.errorMessage(e)); });
             }
         });
     }

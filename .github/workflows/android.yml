@@ -33,13 +33,13 @@ jobs:
       - name: Verificar assinatura
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
-          cp app/build/outputs/apk/debug/app-debug.apk Watv-Player-0.1-debug.apk
-          sha256sum Watv-Player-0.1-debug.apk > SHA256SUMS.txt
+          cp app/build/outputs/apk/debug/app-debug.apk Watv-Player-0.2-debug.apk
+          sha256sum Watv-Player-0.2-debug.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Watv-Player-APK
           path: |
-            Watv-Player-0.1-debug.apk
+            Watv-Player-0.2-debug.apk
             SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
