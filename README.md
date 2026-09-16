@@ -1,1 +1,1 @@
-# Watvlayer
+# Watv Player\n\nAplicativo Android para celular e TV Box.\n\nVersão de teste 0.3: M3U/Xtream, perfis, listas criptografadas, favoritos, histórico, filmes/séries, EPG e controle parental.\n\nVeja [RECURSOS.md](RECURSOS.md) para recursos, limites e validação.\n\nO workflow Actions gera o APK após testes e verificação de assinatura. Fontes e serviços externos devem ser configurados pelo usuário no aparelho.\n

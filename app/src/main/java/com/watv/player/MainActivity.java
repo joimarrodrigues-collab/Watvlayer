@@ -28,6 +28,7 @@ public class MainActivity extends Activity {
     final Handler handler=new Handler(Looper.getMainLooper());
     final List<Playlist.Channel> channels=new ArrayList<>(),visible=new ArrayList<>();
     List<Epg.Programme> guide=new ArrayList<>();
+    final Artwork artwork=new Artwork();
     Vault vault; JSONObject db,profile; JSONArray lists,profiles;
     String activeList="",section="Todos",query="",category="",customFilter="",seriesFilter="",screen="home";
     boolean busy=false,full=false; int generation=0,sort=0; long resume=0;
@@ -195,7 +196,10 @@ public class MainActivity extends Activity {
         if(!seriesFilter.isEmpty())visible.sort(Comparator.comparingInt(Playlist.Channel::episodeOrder));
         List<String> labels=new ArrayList<>();
         for(Playlist.Channel c:visible){boolean series=section.equals("Séries")&&seriesFilter.isEmpty();labels.add((fav.optBoolean(c.id)?"★ ":"")+(blocked(c)?"🔒 ":"")+(series?c.seriesName():c.name)+"\n"+c.group+" • "+c.kind());}
-        listView.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,labels){@Override public View getView(int pos,View view,android.view.ViewGroup parent){TextView t=(TextView)super.getView(pos,view,parent);t.setMinHeight(dp(64));t.setTextSize(17);t.setTextColor(Color.WHITE);return t;}});
+        listView.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,labels){@Override public View getView(int pos,View view,android.view.ViewGroup parent){LinearLayout row;ImageView image;TextView title;
+            if(view instanceof LinearLayout){row=(LinearLayout)view;image=(ImageView)row.getChildAt(0);title=(TextView)row.getChildAt(1);}
+            else{row=new LinearLayout(MainActivity.this);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(4),dp(4),dp(4),dp(4));image=new ImageView(MainActivity.this);image.setScaleType(ImageView.ScaleType.CENTER_INSIDE);row.addView(image,new LinearLayout.LayoutParams(dp(52),dp(64)));title=text("",17);row.addView(title,new LinearLayout.LayoutParams(0,-2,1));}
+            title.setText(labels.get(pos));artwork.show(image,visible.get(pos).logo);return row;}});
         status.setText(section+(seriesFilter.isEmpty()?"":" • "+seriesFilter)+" • "+visible.size()+" itens");
     }
     boolean blocked(Playlist.Channel c){return !db.optString("pin").isEmpty() && obj(profile,"blocked").optBoolean(c.group);}
@@ -343,5 +347,5 @@ public class MainActivity extends Activity {
     @Override public void onBackPressed(){if(playing!=null){if(full)fullScreen();else home();}else if(!seriesFilter.isEmpty()){seriesFilter="";filter();}else if(!screen.equals("catalog"))home();else super.onBackPressed();}
     @Override protected void onStop(){release();super.onStop();}
     @Override protected void onStart(){super.onStart();if(playing!=null&&player==null)startPlayer();}
-    @Override protected void onDestroy(){release();worker.shutdown();super.onDestroy();}
+    @Override protected void onDestroy(){release();artwork.close();worker.shutdown();super.onDestroy();}
 }

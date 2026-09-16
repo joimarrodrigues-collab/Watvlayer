@@ -6,7 +6,7 @@ Aplicativo próprio inspirado nas funções identificadas estaticamente no APK H
 
 - URL M3U, arquivo M3U e Xtream via exportação get.php.
 - Gzip, UTF-8/UTF-16/Windows-1252, linhas CR/LF, listas sem cabeçalho, redirecionamentos, URLs com espaços e diagnóstico sem expor credenciais.
-- tvg-id, tvg-logo e cabeçalhos User-Agent/Referer de EXTVLCOPT e sufixos de URL. Logos são lidos como metadados, mas ainda não exibidos no catálogo.
+- tvg-id, tvg-logo e cabeçalhos User-Agent/Referer de EXTVLCOPT e sufixos de URL. Logos/capas fornecidos por tvg-logo são exibidos no catálogo, com cache e limite de imagem.
 - Múltiplas listas persistidas com AES-GCM e chave no Android Keystore; ativação local, atualização, renomeação, edição de URL e remoção.
 - Perfis com avatar, favoritos, minha lista, coleções, histórico e progresso independentes.
 - Canais ao vivo, filmes e séries classificados por URL/categoria/nome. Agrupamento por série e ordenação de episódios quando o título contém S01E01.
