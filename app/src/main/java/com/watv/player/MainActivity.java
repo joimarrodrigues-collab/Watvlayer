@@ -174,7 +174,7 @@ public class MainActivity extends Activity {
         search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int b,int c){}public void afterTextChanged(Editable e){}public void onTextChanged(CharSequence s,int a,int b,int c){query=s.toString();filter();}});
         groups.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int i,long id){category=i==0?"":cats.get(i);filter();}});
         sort=profile.optInt("sort");filter();
-        if(channels.isEmpty())button(root,"Importar sua lista",this::importPage);
+        if(channels.isEmpty())button(root,"Importar sua lista",()->guardAdmin(this::importPage));
     }
     void filter(){
         if(listView==null)return;visible.clear();String q=query.toLowerCase(Locale.ROOT);JSONObject fav=obj(profile,"favorites"),watch=obj(profile,"watchlist"),history=obj(profile,"history"),positions=obj(profile,"positions");Set<String> seriesSeen=new HashSet<>();
