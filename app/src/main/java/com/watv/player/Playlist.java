@@ -12,15 +12,31 @@ import java.util.regex.*;
 
 public final class Playlist {
     public static final class Channel {
-        public final String name, group, url, id;
+        public final String name, group, url, id, epgId, logo;
+        public final Map<String,String> headers;
         Channel(String name, String group, String url) {
-            this.name = name; this.group = group; this.url = url;
+            this(name,group,url,"","",Collections.emptyMap());
+        }
+        Channel(String name,String group,String url,String epgId,String logo,Map<String,String> headers) {
+            this.name = name; this.group = group; this.url = url; this.epgId=epgId; this.logo=logo; this.headers=new HashMap<>(headers);
             try {
                 byte[] hash = MessageDigest.getInstance("SHA-256").digest(url.getBytes(StandardCharsets.UTF_8));
                 StringBuilder out = new StringBuilder();
                 for (byte b : hash) out.append(String.format(Locale.ROOT, "%02x", b & 255));
                 id = out.toString();
             } catch (Exception e) { throw new IllegalStateException(e); }
+        }
+        public String kind() {
+            String path=URI.create(url).getPath().toLowerCase(Locale.ROOT);
+            String g=group.toLowerCase(Locale.ROOT);
+            if(path.contains("/series/") || Pattern.compile("(?i)\\bS\\d{1,2}\\s*E\\d{1,3}\\b").matcher(name).find())return "Séries";
+            if(path.contains("/movie/") || path.contains("/vod/") || g.contains("filme") || path.matches(".*\\.(mp4|mkv|avi|mov)$"))return "Filmes";
+            return "Ao vivo";
+        }
+        public String seriesName() { return name.replaceFirst("(?i)\\s*S\\d{1,2}\\s*E\\d{1,3}.*$", "").trim(); }
+        public int episodeOrder() {
+            Matcher m=Pattern.compile("(?i)S(\\d{1,2})\\s*E(\\d{1,3})").matcher(name);
+            return m.find()?Integer.parseInt(m.group(1))*1000+Integer.parseInt(m.group(2)):0;
         }
     }
     public static final class LoadException extends IOException {
@@ -53,10 +69,15 @@ public final class Playlist {
     private static String encode(String s) {
         try { return URLEncoder.encode(s, "UTF-8"); } catch (UnsupportedEncodingException e) { throw new AssertionError(e); }
     }
+    public static String attribute(String line,String key) {
+        Matcher m=Pattern.compile(Pattern.quote(key)+"=[\\\"']([^\\\"']*)[\\\"']",Pattern.CASE_INSENSITIVE).matcher(line);
+        return m.find()?m.group(1):"";
+    }
     public static List<Channel> parse(String text, String base) throws IOException {
         List<Channel> result = new ArrayList<>();
         Set<String> seen = new HashSet<>();
-        String name = "", group = "Sem categoria";
+        String name = "", group = "Sem categoria", epgId="", logo="";
+        Map<String,String> headers=new HashMap<>();
         String clean = text.replace("\uFEFF", "").trim();
         String lower = clean.toLowerCase(Locale.ROOT);
         if (lower.startsWith("<") || lower.startsWith("{") || lower.startsWith("[")) throw new LoadException("FORMATO: a fonte retornou uma página ou resposta de API, não uma lista M3U. Use o link direto da lista.");
@@ -72,13 +93,21 @@ public final class Playlist {
                 name = comma >= 0 ? line.substring(comma + 1).trim() : "";
                 Matcher m = Pattern.compile("group-title=\"([^\"]*)\"").matcher(line);
                 group = m.find() ? m.group(1) : "Sem categoria";
+                epgId=attribute(line,"tvg-id"); logo=attribute(line,"tvg-logo");
+            } else if(line.startsWith("#EXTVLCOPT:http-user-agent=")) { headers.put("User-Agent",line.substring(line.indexOf('=')+1));
+            } else if(line.startsWith("#EXTVLCOPT:http-referrer=")) { headers.put("Referer",line.substring(line.indexOf('=')+1));
             } else if (line.startsWith("#EXTGRP:")) { group = line.substring(8).trim(); }
             else if (!line.startsWith("#")) {
                 try {
+                    String[] parts=line.split("\\|",2); line=parts[0];
+                    if(parts.length>1)for(String pair:parts[1].split("&")){
+                        String[] kv=pair.split("=",2);
+                        if(kv.length==2 && (kv[0].equalsIgnoreCase("User-Agent") || kv[0].equalsIgnoreCase("Referer"))) headers.put(kv[0],URLDecoder.decode(kv[1],"UTF-8"));
+                    }
                     String url = base == null ? httpUri(line).toString() : httpUri(URI.create(base).resolve(line.replace(" ", "%20")).toString()).toString();
-                    if (seen.add(url)) result.add(new Channel(name.isEmpty() ? "Canal " + (result.size() + 1) : name, group.isEmpty() ? "Sem categoria" : group, url));
+                    if (seen.add(url)) result.add(new Channel(name.isEmpty() ? "Canal " + (result.size() + 1) : name, group.isEmpty() ? "Sem categoria" : group, url, epgId, logo, headers));
                 } catch (IllegalArgumentException ignored) { }
-                name = ""; group = "Sem categoria";
+                name = ""; group = "Sem categoria"; epgId=""; logo=""; headers=new HashMap<>();
             }
         }
         if (result.isEmpty()) throw new LoadException("LISTA VAZIA: nenhum canal HTTP/HTTPS válido encontrado. Confira se a conta está ativa e se o arquivo contém links completos.");
@@ -100,7 +129,13 @@ public final class Playlist {
             return new String(bytes, Charset.forName("windows-1252"));
         }
     }
-    public static List<Channel> download(String address) throws IOException {
+    public static final class Source {
+        public final String text,url;
+        Source(String text,String url){this.text=text;this.url=url;}
+    }
+    public static List<Channel> download(String address) throws IOException { Source s=fetch(address);return parse(s.text,s.url); }
+    public static String downloadText(String address) throws IOException {return fetch(address).text;}
+    public static Source fetch(String address) throws IOException {
         String current = httpUri(address).toString();
         for (int redirects = 0; redirects < 6; redirects++) {
             HttpURLConnection c = (HttpURLConnection) new URL(current).openConnection();
@@ -123,9 +158,9 @@ public final class Playlist {
                     if (b != -1) peek.unread(b);
                     if (a != -1) peek.unread(a);
                     if (a == 0x1f && b == 0x8b) {
-                        try (InputStream decoded = new GZIPInputStream(peek)) { return parse(read(decoded), current); }
+                        try (InputStream decoded = new GZIPInputStream(peek)) { return new Source(read(decoded),current); }
                     }
-                    return parse(read(peek), current);
+                    return new Source(read(peek),current);
                 }
             } finally { c.disconnect(); }
         }
